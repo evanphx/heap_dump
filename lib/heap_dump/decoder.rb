@@ -96,6 +96,9 @@ module Rubinius
                 when 2
                   nil
                 end
+        when ?c
+          sz = int
+          obj = @f.read(sz)
         else
           raise "invalid sub code - #{subcmd}, #{subcmd.chr}"
         end

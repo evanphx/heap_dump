@@ -20,7 +20,7 @@ module Rubinius
       end
 
       def constant_table
-        @constants ||= DumpedLookupTable.new(@object["@constants"])
+        @constants ||= DumpedLookupTable.new(@object["@constant_table"])
       end
 
       def constants

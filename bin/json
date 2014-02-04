@@ -1,0 +1,63 @@
+#!/usr/bin/env rbx
+
+require "heap_dump"
+require "json"
+
+input = ARGV.shift
+output = ARGV.shift
+
+def get_id(obj)
+  case obj
+  when Rubinius::HeapDump::Reference
+    obj.id
+  when Rubinius::HeapDump::XSymbol
+    obj.data.to_s.force_encoding("utf-8")
+  else
+    obj
+  end
+end
+
+def get_name(string)
+  # Account for XSymbol names
+  string.to_s.sub(/^@+/, "").force_encoding("utf-8")
+end
+
+File.open(output, "w") do |f|
+  $stdout.puts "Reading dump..."
+  d = Rubinius::HeapDump::Decoder.new
+  d.decode input
+
+  $stdout.puts "Processing objects..."
+  start = true
+  d.objects.each do |o|
+    start ? f.puts("[") || start = false : f.puts(",")
+
+    case o
+    when Rubinius::HeapDump::DumpedObject
+      r = {}
+      o.layout.each_with_index { |n, i| r[get_name(n)] = get_id(o.ivars[i]) }
+
+      obj = {
+        id: o.id,
+        class: get_id(o.klass),
+        bytes: get_id(o.bytes),
+        references: r
+      }
+
+      $stdout.write "object: #{obj[:id]}\r"
+    when Rubinius::HeapDump::DumpedModule
+      # Extra features for Modules; ignored for now
+    when Rubinius::HeapDump::DumpedLookupTable
+      # Extra features for LookupTables; ignored for now
+    when Rubinius::HeapDump::DumpedMethodTable
+      # Extra features for MethodTables; ignored for now
+    else
+      $stdout.puts "unknown object type: #{o.class}"
+    end
+
+    f.write JSON.generate(obj)
+  end
+
+  f.puts "]"
+  $stdout.puts "\nDone"
+end
